@@ -163,6 +163,8 @@
       align-items: center;
       justify-content: space-between;
       margin-top: 6px;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .panel-toggle .arrow { font-size: 11px; color: var(--gray); transition: transform 0.2s; }
     .panel-toggle.open .arrow { transform: rotate(180deg); }
@@ -650,6 +652,14 @@ document.addEventListener('touchstart',    e => { if (e.touches.length > 1) e.pr
 document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
 document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
 document.addEventListener('gestureend',    e => e.preventDefault(), { passive: false });
+
+// Prevent double-tap zoom but allow rapid button taps
+let lastTap = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTap < 300 && !e.target.closest('button')) e.preventDefault();
+  lastTap = now;
+}, { passive: false });
 </script>
 </body>
 </html>
