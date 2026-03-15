@@ -640,6 +640,20 @@ async function init() {
 }
 
 init();
+
+// ─── Prevent all zoom on iOS ─────────────────
+// Pinch zoom: block any multi-touch gesture
+document.addEventListener('touchstart', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+// Double-tap zoom: block two taps within 300ms
+let lastTap = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTap < 300) e.preventDefault();
+  lastTap = now;
+}, { passive: false });
 </script>
 </body>
 </html>
