@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Spelling Bee</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --yellow: #F7DA21;
+      --yellow-dark: #d4b800;
+      --dark: #1a1a1a;
+      --gray: #888;
+      --light-gray: #f0f0f0;
+      --mid-gray: #ddd;
+      --white: #fff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      background: var(--white);
+      color: var(--dark);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 16px 32px;
+    }
+
+    header {
+      width: 100%;
+      padding: 14px 0 10px;
+      border-bottom: 1px solid var(--mid-gray);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .title { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+    .subtitle { font-size: 12px; color: var(--gray); font-weight: 500; }
+
+    .rank-row {
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+    .rank-name { font-size: 13px; font-weight: 700; color: var(--gray); }
+    .score-num { font-size: 14px; font-weight: 700; }
+
+    .progress-track {
+      width: 100%;
+      height: 5px;
+      background: var(--light-gray);
+      border-radius: 3px;
+      margin-top: 5px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--dark);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      min-width: 0;
+    }
+
+    .message-area {
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .message {
+      font-size: 15px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .message.visible { opacity: 1; }
+    .message.good    { background: var(--dark); color: var(--white); }
+    .message.pangram { background: var(--yellow); color: var(--dark); }
+    .message.error   { background: var(--light-gray); color: var(--dark); }
+
+    .word-display {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin: 4px 0;
+      flex-wrap: wrap;
+    }
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 32px;
+      background: var(--dark);
+      margin-left: 1px;
+      vertical-align: middle;
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .hive-wrap { margin: 6px 0 2px; }
+    .hex-cell { cursor: pointer; user-select: none; }
+    .hex-poly { transition: fill 0.08s; }
+    .hex-label {
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 21px;
+      pointer-events: none;
+      dominant-baseline: central;
+      text-anchor: middle;
+      fill: var(--dark);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0 6px;
+    }
+    .btn {
+      padding: 11px 22px;
+      border-radius: 100px;
+      border: 1.5px solid var(--dark);
+      background: var(--white);
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.08s, transform 0.08s;
+      user-select: none;
+    }
+    .btn:active { background: var(--light-gray); transform: scale(0.96); }
+    .btn-icon   { padding: 11px 16px; font-size: 16px; }
+    .btn-enter  { background: var(--dark); color: var(--white); }
+    .btn-enter:active { background: #333; }
+
+    .panel-toggle {
+      width: 100%;
+      padding: 11px 2px;
+      border: none;
+      border-top: 1px solid var(--mid-gray);
+      background: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    .panel-toggle .arrow { font-size: 11px; color: var(--gray); transition: transform 0.2s; }
+    .panel-toggle.open .arrow { transform: rotate(180deg); }
+
+    .panel-body {
+      width: 100%;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.25s ease;
+    }
+    .panel-body.open { max-height: 600px; }
+    .panel-inner { padding: 10px 0 14px; }
+
+    .guide-section { margin-bottom: 14px; }
+    .guide-section:last-child { margin-bottom: 0; }
+    .guide-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--gray);
+      margin-bottom: 8px;
+    }
+    .guide-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 11px;
+      background: var(--light-gray);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      transition: opacity 0.2s;
+    }
+    .chip .chip-remaining { font-size: 12px; font-weight: 500; color: var(--gray); }
+    .chip.done { opacity: 0.35; text-decoration: line-through; }
+    .chip.done .chip-remaining { display: none; }
+
+    .found-header-left { display: flex; align-items: center; gap: 8px; }
+    .found-badge {
+      background: var(--dark);
+      color: var(--white);
+      border-radius: 100px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .found-list { display: flex; flex-wrap: wrap; gap: 7px; }
+    .found-word {
+      padding: 5px 13px;
+      background: var(--light-gray);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .found-word.is-pangram { background: var(--yellow); font-weight: 800; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+    .shake { animation: shake 0.35s ease; }
+
+    /* Loading overlay */
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--mid-gray);
+      border-top-color: var(--dark);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingStatus { font-size: 14px; color: var(--gray); font-weight: 500; text-align: center; padding: 0 32px; }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay (shown until dictionary is ready) -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingStatus">Loading dictionary&hellip;</div>
+</div>
+
+<header>
+  <span class="title">Spelling Bee</span>
+  <span class="subtitle" id="puzzleDate"></span>
+</header>
+
+<div class="rank-row">
+  <span class="rank-name" id="rankName">Beginner</span>
+  <span class="score-num" id="scoreNum">0</span>
+</div>
+<div class="progress-track">
+  <div class="progress-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<div class="message-area">
+  <span class="message" id="message"></span>
+</div>
+
+<div class="word-display" id="wordDisplay"><span class="cursor"></span></div>
+
+<div class="hive-wrap">
+  <svg id="hive" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="actions">
+  <button class="btn" onclick="deleteLetter()">Delete</button>
+  <button class="btn btn-icon" onclick="shuffleOuter()" title="Shuffle">&#8635;</button>
+  <button class="btn btn-enter" onclick="submitWord()">Enter</button>
+</div>
+
+<button class="panel-toggle" id="guideToggle" onclick="togglePanel('guide')">
+  <span>Guide</span>
+  <span class="arrow">&#9660;</span>
+</button>
+<div class="panel-body" id="guideBody">
+  <div class="panel-inner">
+    <div class="guide-section">
+      <div class="guide-label">Words remaining by first letter</div>
+      <div class="guide-chips" id="letterChips"></div>
+    </div>
+    <div class="guide-section">
+      <div class="guide-label">Words remaining by length</div>
+      <div class="guide-chips" id="lengthChips"></div>
+    </div>
+  </div>
+</div>
+
+<button class="panel-toggle" id="foundToggle" onclick="togglePanel('found')">
+  <div class="found-header-left">
+    <span>Found Words</span>
+    <span class="found-badge" id="foundBadge">0</span>
+  </div>
+  <span class="arrow">&#9660;</span>
+</button>
+<div class="panel-body" id="foundBody">
+  <div class="panel-inner">
+    <div class="found-list" id="foundList"></div>
+  </div>
+</div>
+
+<script>
+// ─── Daily puzzle rotation ───────────────────
+// Only center + outer letters stored here.
+// Valid words are computed at runtime from the dictionary.
+const DAILY_PUZZLES = [
+  { center: 'A', outer: ['R','T','N','G','E','S'] }, // STRANGE, GARNETS
+  { center: 'E', outer: ['P','L','A','N','T','S'] }, // PLANETS, PLATENS
+  { center: 'L', outer: ['O','C','A','T','E','S'] }, // LOCATES
+  { center: 'N', outer: ['A','T','U','R','E','S'] }, // NATURES
+  { center: 'E', outer: ['R','S','T','O','N','I'] }, // ORIENTS, STONIER
+  { center: 'O', outer: ['S','T','R','N','G','E'] }, // STRONGER, ESTROGEN
+  { center: 'I', outer: ['S','T','R','N','G','E'] }, // STINGER, RESTING
+  { center: 'T', outer: ['R','O','P','I','C','A'] }, // APRICOT
+  { center: 'U', outer: ['N','C','L','E','A','R'] }, // NUCLEAR
+  { center: 'M', outer: ['O','U','N','T','A','I'] }, // MOUNTAIN
+  { center: 'A', outer: ['C','H','I','N','G','E'] }, // TEACHING, CHEATING
+  { center: 'R', outer: ['A','P','T','U','E','S'] }, // PASTURES
+  { center: 'D', outer: ['R','A','N','G','E','S'] }, // GRANDEST
+  { center: 'O', outer: ['W','R','D','L','E','S'] }, // WORDLES...
+  { center: 'E', outer: ['M','B','R','A','C','S'] }, // EMBRACES
+];
+
+function getTodaysPuzzle() {
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  return DAILY_PUZZLES[dayIndex % DAILY_PUZZLES.length];
+}
+
+// ─── Dictionary ──────────────────────────────
+// ENABLE word list — public domain, ~170k words
+const DICT_URL  = 'https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt';
+const CACHE_KEY = 'spellingBee_dict_v1';
+
+async function fetchDictionary() {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) return cached.split('\n');
+  } catch (_) {}
+
+  const res = await fetch(DICT_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+
+  const words = text.split('\n')
+    .map(w => w.trim().toUpperCase())
+    .filter(w => w.length >= 4 && /^[A-Z]+$/.test(w));
+
+  try { localStorage.setItem(CACHE_KEY, words.join('\n')); } catch (_) {}
+  return words;
+}
+
+function computePuzzleWords(puzzleDef, wordList) {
+  const allLetters = new Set([puzzleDef.center, ...puzzleDef.outer]);
+  const answers  = new Set();
+  const pangrams = new Set();
+
+  for (const word of wordList) {
+    if (!word.includes(puzzleDef.center)) continue;
+    let ok = true;
+    for (const ch of word) { if (!allLetters.has(ch)) { ok = false; break; } }
+    if (!ok) continue;
+
+    answers.add(word);
+    if ([...allLetters].every(l => word.includes(l))) pangrams.add(word);
+  }
+  return { answers, pangrams };
+}
+
+// ─── Game state ──────────────────────────────
+let puzzle, allLetters, answers, pangrams, maxScore;
+let outerLetters = [];
+let input = '', found = [], score = 0, msgTimer = null;
+
+function stateKey() {
+  return `spellingBee_progress_${Math.floor(Date.now() / 86400000)}`;
+}
+function saveState() {
+  try { localStorage.setItem(stateKey(), JSON.stringify({ found, score })); } catch (_) {}
+}
+function loadState() {
+  try {
+    const saved = localStorage.getItem(stateKey());
+    if (saved) { ({ found, score } = JSON.parse(saved)); }
+  } catch (_) {}
+}
+
+// ─── Ranks ───────────────────────────────────
+const RANKS = [
+  { name: 'Beginner',   pct: 0    },
+  { name: 'Good Start', pct: 0.02 },
+  { name: 'Moving Up',  pct: 0.05 },
+  { name: 'Good',       pct: 0.08 },
+  { name: 'Solid',      pct: 0.15 },
+  { name: 'Nice',       pct: 0.25 },
+  { name: 'Great',      pct: 0.40 },
+  { name: 'Amazing',    pct: 0.50 },
+  { name: 'Genius',     pct: 0.70 },
+  { name: 'Queen Bee',  pct: 1.00 },
+];
+
+function wordScore(w) {
+  return w.length === 4 ? 1 : w.length + (pangrams.has(w) ? 7 : 0);
+}
+function getRank(s) {
+  const p = maxScore > 0 ? s / maxScore : 0;
+  let r = RANKS[0];
+  for (const x of RANKS) { if (p >= x.pct) r = x; }
+  return r;
+}
+
+// ─── Honeycomb ───────────────────────────────
+const HEX_R = 38, HEX_D = HEX_R * Math.sqrt(3);
+const SVG_W = 290, SVG_H = 268, CX = 145, CY = 134;
+const OUTER_ANGLES = [0, 60, 120, 180, 240, 300];
+
+function hexPoints(x, y, r) {
+  return Array.from({length:6}, (_,i) => {
+    const a = Math.PI/2 + i*Math.PI/3;
+    return `${(x + r*Math.cos(a)).toFixed(1)},${(y + r*Math.sin(a)).toFixed(1)}`;
+  }).join(' ');
+}
+
+function buildHive() {
+  const svg = document.getElementById('hive');
+  svg.setAttribute('width', SVG_W);
+  svg.setAttribute('height', SVG_H);
+  svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+  svg.innerHTML = '';
+
+  const cells = [
+    { x: CX, y: CY, letter: puzzle.center, center: true },
+    ...OUTER_ANGLES.map((deg, i) => {
+      const a = deg * Math.PI / 180;
+      return { x: CX + HEX_D*Math.cos(a), y: CY + HEX_D*Math.sin(a), letter: outerLetters[i], center: false };
+    }),
+  ];
+
+  cells.forEach(cell => {
+    const g    = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    const txt  = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    g.setAttribute('class', 'hex-cell');
+    poly.setAttribute('class', 'hex-poly');
+    poly.setAttribute('points', hexPoints(cell.x, cell.y, HEX_R));
+    poly.setAttribute('fill', cell.center ? '#F7DA21' : '#E8E8E8');
+    poly.setAttribute('stroke', '#fff');
+    poly.setAttribute('stroke-width', '3');
+    txt.setAttribute('class', 'hex-label');
+    txt.setAttribute('x', cell.x.toFixed(1));
+    txt.setAttribute('y', cell.y.toFixed(1));
+    txt.textContent = cell.letter;
+
+    g.appendChild(poly); g.appendChild(txt);
+
+    const fillDefault  = cell.center ? '#F7DA21' : '#E8E8E8';
+    const fillPressed  = cell.center ? '#d4b800' : '#ccc';
+    g.addEventListener('pointerdown', e => { e.preventDefault(); poly.setAttribute('fill', fillPressed); addLetter(cell.letter); });
+    g.addEventListener('pointerup',     () => poly.setAttribute('fill', fillDefault));
+    g.addEventListener('pointercancel', () => poly.setAttribute('fill', fillDefault));
+    svg.appendChild(g);
+  });
+}
+
+// ─── Input ───────────────────────────────────
+function addLetter(l) { input += l; renderInput(); }
+
+function deleteLetter() {
+  if (!input.length) return;
+  input = input.slice(0, -1);
+  renderInput();
+}
+
+function submitWord() {
+  if (!input.length) return; // guard against double-fire (keyboard + button focus)
+  const word = input.toUpperCase();
+  input = '';
+
+  if (word.length < 4) { err('Too short!'); return; }
+  if (!word.includes(puzzle.center)) { err(`Missing ${puzzle.center}!`); return; }
+  for (const ch of word) { if (!allLetters.has(ch)) { err('Bad letter!'); return; } }
+  if (found.includes(word)) { err('Already found!'); return; }
+  if (!answers.has(word))   { err('Not in word list'); return; }
+
+  found.push(word);
+  const pts = wordScore(word);
+  score += pts;
+  saveState();
+  const pg = pangrams.has(word);
+  showMessage(pg ? `Pangram! +${pts}` : pts === 1 ? 'Nice!' : `+${pts}`, pg ? 'pangram' : 'good');
+  renderInput(); renderScore(); renderGuide(); renderFoundWords();
+}
+
+function err(msg) { showMessage(msg, 'error'); shakeInput(); renderInput(); }
+
+function shuffleOuter() {
+  for (let i = outerLetters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [outerLetters[i], outerLetters[j]] = [outerLetters[j], outerLetters[i]];
+  }
+  buildHive();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Enter')     { submitWord(); return; }
+  if (e.key === 'Backspace') { deleteLetter(); return; }
+  const ch = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(ch)) addLetter(ch);
+});
+
+// ─── Render ──────────────────────────────────
+function renderInput() {
+  const el = document.getElementById('wordDisplay');
+  if (!input.length) { el.innerHTML = '<span class="cursor"></span>'; return; }
+  el.innerHTML = input.split('').map(ch =>
+    `<span class="${ch === puzzle.center ? 'center-char' : 'outer-char'}">${ch}</span>`
+  ).join('') + '<span class="cursor"></span>';
+}
+
+function renderScore() {
+  document.getElementById('rankName').textContent = getRank(score).name;
+  document.getElementById('scoreNum').textContent = score;
+  const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
+  document.getElementById('progressFill').style.width = `${Math.min(pct, 100)}%`;
+}
+
+function renderGuide() {
+  const lTotal = {}, lDone = {};
+  for (const w of answers) lTotal[w[0]] = (lTotal[w[0]] || 0) + 1;
+  for (const w of found)   lDone[w[0]]  = (lDone[w[0]]  || 0) + 1;
+
+  const lChips = document.getElementById('letterChips');
+  lChips.innerHTML = '';
+  for (const lt of Object.keys(lTotal).sort()) {
+    const rem = lTotal[lt] - (lDone[lt] || 0);
+    const c = document.createElement('div');
+    c.className = 'chip' + (rem === 0 ? ' done' : '');
+    c.innerHTML = `<span>${lt}</span><span class="chip-remaining">${rem}</span>`;
+    lChips.appendChild(c);
+  }
+
+  const rTotal = {}, rDone = {};
+  for (const w of answers) rTotal[w.length] = (rTotal[w.length] || 0) + 1;
+  for (const w of found)   rDone[w.length]  = (rDone[w.length]  || 0) + 1;
+
+  const rChips = document.getElementById('lengthChips');
+  rChips.innerHTML = '';
+  for (const len of Object.keys(rTotal).map(Number).sort((a,b) => a-b)) {
+    const rem = rTotal[len] - (rDone[len] || 0);
+    const c = document.createElement('div');
+    c.className = 'chip' + (rem === 0 ? ' done' : '');
+    c.innerHTML = `<span>${len}-letter</span><span class="chip-remaining">${rem}</span>`;
+    rChips.appendChild(c);
+  }
+}
+
+function renderFoundWords() {
+  document.getElementById('foundBadge').textContent = found.length;
+  document.getElementById('foundList').innerHTML = [...found].sort().map(w =>
+    `<span class="found-word${pangrams.has(w) ? ' is-pangram' : ''}">${w}</span>`
+  ).join('');
+}
+
+// ─── Panels ──────────────────────────────────
+function togglePanel(name) {
+  const body   = document.getElementById(name + 'Body');
+  const toggle = document.getElementById(name + 'Toggle');
+  toggle.classList.toggle('open', body.classList.toggle('open'));
+}
+
+// ─── Messages ────────────────────────────────
+function showMessage(text, type) {
+  const el = document.getElementById('message');
+  el.textContent = text;
+  el.className = `message ${type} visible`;
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(() => el.classList.remove('visible'), 1800);
+}
+
+function shakeInput() {
+  const el = document.getElementById('wordDisplay');
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+}
+
+// ─── Init ────────────────────────────────────
+async function init() {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  document.getElementById('loadingStatus').textContent = 'Loading dictionary\u2026';
+
+  let wordList;
+  try {
+    wordList = await fetchDictionary();
+  } catch (e) {
+    document.getElementById('loadingStatus').textContent =
+      'Could not load dictionary. Check your connection and reload.';
+    return;
+  }
+
+  puzzle       = getTodaysPuzzle();
+  const result = computePuzzleWords(puzzle, wordList);
+  answers      = result.answers;
+  pangrams     = result.pangrams;
+  allLetters   = new Set([puzzle.center, ...puzzle.outer]);
+  outerLetters = [...puzzle.outer];
+  maxScore     = [...answers].reduce((s, w) => s + wordScore(w), 0);
+  loadState();
+
+  // Show today's date in subtitle
+  document.getElementById('puzzleDate').textContent =
+    new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+  buildHive();
+  renderInput();
+  renderScore();
+  renderGuide();
+  renderFoundWords();
+}
+
+init();
+</script>
+</body>
+</html>
