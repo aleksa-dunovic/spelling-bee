@@ -148,6 +148,19 @@
     .btn-enter  { background: var(--dark); color: var(--white); }
     .btn-enter:active { background: #333; }
 
+    .section-header {
+      width: 100%;
+      padding: 11px 2px;
+      border-top: 1px solid var(--mid-gray);
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-body { width: 100%; padding: 4px 0 14px; }
+
     .panel-toggle {
       width: 100%;
       padding: 11px 2px;
@@ -173,10 +186,34 @@
       width: 100%;
       overflow: hidden;
       max-height: 0;
-      transition: max-height 0.25s ease;
+      transition: max-height 0.4s ease;
     }
-    .panel-body.open { max-height: 600px; }
+    .panel-body.open { max-height: 3000px; }
     .panel-inner { padding: 10px 0 14px; }
+
+    .answers-group { margin-bottom: 16px; }
+    .answers-group:last-child { margin-bottom: 0; }
+    .answers-letter {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--gray);
+      margin-bottom: 7px;
+    }
+    .answers-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .answers-row:last-child { margin-bottom: 0; }
+    .answer-word {
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--light-gray);
+      color: var(--dark);
+    }
+    .answer-word.ans-found        { background: var(--dark); color: var(--white); }
+    .answer-word.ans-pangram      { background: #fef08a; color: var(--dark); }
+    .answer-word.ans-pangram-found{ background: var(--yellow); color: var(--dark); font-weight: 800; }
 
     .guide-section { margin-bottom: 14px; }
     .guide-section:last-child { margin-bottom: 0; }
@@ -293,33 +330,33 @@
   <button class="btn btn-enter" onclick="submitWord()">Enter</button>
 </div>
 
-<button class="panel-toggle open" id="guideToggle" onclick="togglePanel('guide')">
-  <span>Guide</span>
-  <span class="arrow">&#9660;</span>
-</button>
-<div class="panel-body open" id="guideBody">
-  <div class="panel-inner">
-    <div class="guide-section">
-      <div class="guide-label">Words remaining by first letter</div>
-      <div class="guide-chips" id="letterChips"></div>
-    </div>
-    <div class="guide-section">
-      <div class="guide-label">Words remaining by length</div>
-      <div class="guide-chips" id="lengthChips"></div>
-    </div>
+<div class="section-header">Guide</div>
+<div class="section-body">
+  <div class="guide-section">
+    <div class="guide-label">Words remaining by first letter</div>
+    <div class="guide-chips" id="letterChips"></div>
+  </div>
+  <div class="guide-section" style="margin-top:12px">
+    <div class="guide-label">Words remaining by length</div>
+    <div class="guide-chips" id="lengthChips"></div>
   </div>
 </div>
 
-<button class="panel-toggle open" id="foundToggle" onclick="togglePanel('found')">
-  <div class="found-header-left">
-    <span>Found Words</span>
-    <span class="found-badge" id="foundBadge">0</span>
-  </div>
+<div class="section-header">
+  <span>Found Words</span>
+  <span class="found-badge" id="foundBadge">0</span>
+</div>
+<div class="section-body">
+  <div class="found-list" id="foundList"></div>
+</div>
+
+<button class="panel-toggle" id="answersToggle" onclick="togglePanel('answers')">
+  <span>Answers</span>
   <span class="arrow">&#9660;</span>
 </button>
-<div class="panel-body open" id="foundBody">
+<div class="panel-body" id="answersBody">
   <div class="panel-inner">
-    <div class="found-list" id="foundList"></div>
+    <div id="answersList"></div>
   </div>
 </div>
 
@@ -512,7 +549,7 @@ function submitWord() {
   saveState();
   const pg = pangrams.has(word);
   showMessage(pg ? `Pangram! +${pts}` : pts === 1 ? 'Nice!' : `+${pts}`, pg ? 'pangram' : 'good');
-  renderInput(); renderScore(); renderGuide(); renderFoundWords();
+  renderInput(); renderScore(); renderGuide(); renderFoundWords(); renderAnswers();
 }
 
 function err(msg) { showMessage(msg, 'error'); shakeInput(); renderInput(); }
@@ -586,6 +623,43 @@ function renderFoundWords() {
   ).join('');
 }
 
+function renderAnswers() {
+  const byLetter = {};
+  for (const w of answers) {
+    (byLetter[w[0]] ??= []).push(w);
+  }
+
+  const el = document.getElementById('answersList');
+  el.innerHTML = '';
+
+  for (const letter of Object.keys(byLetter).sort()) {
+    const words = byLetter[letter].sort((a, b) => a.length - b.length || a.localeCompare(b));
+
+    const group = document.createElement('div');
+    group.className = 'answers-group';
+    group.innerHTML = `<div class="answers-letter">${letter}</div>`;
+
+    const byLen = {};
+    for (const w of words) (byLen[w.length] ??= []).push(w);
+
+    for (const len of Object.keys(byLen).map(Number).sort((a, b) => a - b)) {
+      const row = document.createElement('div');
+      row.className = 'answers-row';
+      for (const w of byLen[len]) {
+        const isFound   = found.includes(w);
+        const isPangram = pangrams.has(w);
+        const cls = isFound
+          ? (isPangram ? 'ans-pangram-found' : 'ans-found')
+          : (isPangram ? 'ans-pangram' : '');
+        row.innerHTML += `<span class="answer-word${cls ? ' ' + cls : ''}">${w}</span>`;
+      }
+      group.appendChild(row);
+    }
+
+    el.appendChild(group);
+  }
+}
+
 // ─── Panels ──────────────────────────────────
 function togglePanel(name) {
   const body   = document.getElementById(name + 'Body');
@@ -643,6 +717,7 @@ async function init() {
   renderScore();
   renderGuide();
   renderFoundWords();
+  renderAnswers();
 }
 
 init();
