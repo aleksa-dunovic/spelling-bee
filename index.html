@@ -645,10 +645,11 @@ async function init() {
 
 init();
 
-// Pinch zoom fallback for browsers that ignore touch-action
-document.addEventListener('touchstart', e => {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
+// Prevent all zoom on iOS Safari
+document.addEventListener('touchstart',    e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+document.addEventListener('gestureend',    e => e.preventDefault(), { passive: false });
 </script>
 </body>
 </html>
