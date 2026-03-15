@@ -132,12 +132,15 @@
       border-radius: 100px;
       border: 1.5px solid var(--dark);
       background: var(--white);
+      color: var(--dark);
       font-size: 14px;
       font-weight: 700;
       font-family: inherit;
       cursor: pointer;
       transition: background 0.08s, transform 0.08s;
       user-select: none;
+      -webkit-appearance: none;
+      appearance: none;
     }
     .btn:active { background: var(--light-gray); transform: scale(0.96); }
     .btn-icon   { padding: 11px 16px; font-size: 16px; }
@@ -287,11 +290,11 @@
   <button class="btn btn-enter" onclick="submitWord()">Enter</button>
 </div>
 
-<button class="panel-toggle" id="guideToggle" onclick="togglePanel('guide')">
+<button class="panel-toggle open" id="guideToggle" onclick="togglePanel('guide')">
   <span>Guide</span>
   <span class="arrow">&#9660;</span>
 </button>
-<div class="panel-body" id="guideBody">
+<div class="panel-body open" id="guideBody">
   <div class="panel-inner">
     <div class="guide-section">
       <div class="guide-label">Words remaining by first letter</div>
@@ -304,14 +307,14 @@
   </div>
 </div>
 
-<button class="panel-toggle" id="foundToggle" onclick="togglePanel('found')">
+<button class="panel-toggle open" id="foundToggle" onclick="togglePanel('found')">
   <div class="found-header-left">
     <span>Found Words</span>
     <span class="found-badge" id="foundBadge">0</span>
   </div>
   <span class="arrow">&#9660;</span>
 </button>
-<div class="panel-body" id="foundBody">
+<div class="panel-body open" id="foundBody">
   <div class="panel-inner">
     <div class="found-list" id="foundList"></div>
   </div>
